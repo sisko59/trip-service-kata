@@ -1,5 +1,6 @@
 package org.craftedsw.tripservicekata.trip;
 
+//@formatter:off
 import static org.hamcrest.core.Is.is;
 
 import java.util.List;
@@ -24,6 +25,7 @@ public class TripServiceTest {
 	@Before
 	public void initialise() {
 		tripService = new TestableTipService();
+		loggedInUser = USER_LOGGED;
 	}
 
 	@Test(expected = UserNotLoggedInException.class)
@@ -35,11 +37,10 @@ public class TripServiceTest {
 
 	@Test
 	public void should_no_trip_when_user_is_not_a_friend() {
-		loggedInUser = USER_LOGGED;
-
-		User friend = new User();
-		friend.addFriend(ANOTHER_USER);
-		friend.addTrip(TO_BARCELONA);
+		User friend = UserBuilder.aUser()
+				.friendsWith(ANOTHER_USER)
+				.withTrips(TO_BARCELONA)
+				.build();
 
 		List<Trip> friendTrips = tripService.getTripsByUser(friend);
 
@@ -48,16 +49,53 @@ public class TripServiceTest {
 
 	@Test
 	public void should_friend_trips_when_user_is_a_friend() throws Exception {
-		loggedInUser = USER_LOGGED;
-
-		User friend = new User();
-		friend.addFriend(USER_LOGGED);
-		friend.addTrip(TO_BARCELONA);
-		friend.addTrip(TO_LONDON);
+		User friend = UserBuilder.aUser()
+				.friendsWith(USER_LOGGED, ANOTHER_USER)
+				.withTrips(TO_BARCELONA, TO_LONDON)
+				.build();
 
 		List<Trip> friendTrips = tripService.getTripsByUser(friend);
 
 		Assert.assertThat(friendTrips.size(), is(2));
+	}
+
+	public static class UserBuilder {
+
+		private Trip[] trips = new Trip[] {};
+		private User[] friends = new User[] {};
+
+		public static UserBuilder aUser() {
+			return new UserBuilder();
+		}
+
+		public UserBuilder withTrips(Trip... trips) {
+			this.trips = trips;
+			return this;
+		}
+
+		public UserBuilder friendsWith(User... friends) {
+			this.friends = friends;
+			return this;
+		}
+
+		public User build() {
+			User user = new User();
+			addFriends(user);
+			addTripsTo(user);
+			return user;
+		}
+
+		private void addTripsTo(User user) {
+			for (Trip trip : trips) {
+				user.addTrip(trip);
+			}
+		}
+
+		private void addFriends(User user) {
+			for (User friend : friends) {
+				user.addFriend(friend);
+			}
+		}
 	}
 
 	private class TestableTipService extends TripService {
